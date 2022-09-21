@@ -13,17 +13,60 @@
 from socket import *
 from udp_server import *
 from tcp_server import *
+from datetime import *
 import argparse
 
 parser = argparse.ArgumentParser("Server Program", description="This progrma runs the server portion of the application.")
-parser.add_argument('-p', dest='port', help='Sets the connection port', type=int)
+parser.add_argument('-p', dest='port', help='Sets the connection port', type=int, default='8000')
 parser.add_argument('-t', dest='type', help='Sets the connection type (TCP/UDP)', type=str)
 args = parser.parse_args()
 print(args.type)
 
-serverPort = args.port if args.port else 8000
+#Reusable logging method
+def createLog(logFile, method):
+    validMethods = ('IP', 'PORT', 'TIMEDELAY')
+    current = '/'.join(str(datetime.utcnow()).split(' '))
+    response = 'OK' if method[0:9] in validMethods else 'INVALID'
 
-if args.type and args.type == 'UDP':
-    server = UDPServer(serverPort)
+    log = ("{} {} {}\n").format(current, method, response)
+    logFile.write(log)
+    
+logFile = open('logs.txt', 'a')
+
+if args.type == 'UDP':  #Create object based on command line flag
+    server = UDPServer()
+    connection = socket(AF_INET,SOCK_DGRAM)
+    connection.bind(('',args.port))
+
 else:
-    server = TCPServer(serverPort)
+    server = TCPServer()
+    serverSocket = socket(AF_INET,SOCK_STREAM)
+    serverSocket.bind(('',args.port))
+    serverSocket.listen(1)
+    connection, addr = serverSocket.accept() 
+
+print("The server is ready to receive")
+#Main server loop. Used to check for valid methods and create logs.
+while True:
+    if type(server) == UDPServer:
+        message, addr = connection.recvfrom(2048)
+        decoded = message.decode()
+    else:
+        decoded = connection.recv(2048).decode()
+
+    if decoded == 'IP':
+        server.returnIP(connection, addr)
+
+    elif decoded == 'PORT':
+        server.returnPort(connection, addr)
+
+    elif decoded[0:9] == 'TIMEDELAY': #Use try to check for bad datetime object
+        try: 
+            server.returnTime(connection, addr, decoded)
+        except:
+            server.returnInvalid(connection, addr)
+        
+    else:
+        server.returnInvalid(connection, addr)
+    
+    createLog(logFile, decoded)

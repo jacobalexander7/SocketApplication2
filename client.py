@@ -16,17 +16,27 @@ import argparse
 from udp_client import *
 from tcp_client import *
 
+#Handling Command Line Parameters
 parser = argparse.ArgumentParser("Client Program", description="Runs the client portion of the program.")
-parser.add_argument('-i', dest='ip', help='Sets the IP for the connection', type=str)
-parser.add_argument('-p', dest='port', help='Sets the PORT for the connection', type=int)
-parser.add_argument('-t', dest='type', help="Sets the TYPE for the connection (TCP/UDP)", type=str)
+parser.add_argument('-i', dest='ip', help='Sets the IP for the connection', type=str, default = '127.0.0.1')
+parser.add_argument('-p', dest='port', help='Sets the PORT for the connection', type=int, default = 8000)
+parser.add_argument('-t', dest='type', help="Sets the TYPE for the connection (TCP/UDP)", type=str, default = 'tcp')
 args = parser.parse_args()
 
-serverIP = args.ip if args.ip != None else '127.0.0.1'
-serverPort = args.port if args.port != None else 8000
+def showMenu():  #Client menu
+    print("Client started.\nEnter a number.\n1. IP\n2. PORT\n3. TIMEDELAY\n4. QUIT.\n")
 
-if args.type and args.type == 'UDP':
-    client = UDPClient(serverIP, serverPort)
+if args.type == 'UDP':  #Create object based on UDP or TCP input
+    client = UDPClient(args.ip,args.port)
+    connection = socket(AF_INET, SOCK_DGRAM)
+
 else:
-    client = TCPClient(serverIP, serverPort)
-#clientSocket.close  close udp
+    client = TCPClient()
+    connection = socket(AF_INET, SOCK_STREAM)
+    connection.connect((args.ip,args.port))
+
+showMenu()
+#Main Loop for client
+while True:  
+        message = input('\nEnter the number for a command: ')
+        client.send(connection, message)
